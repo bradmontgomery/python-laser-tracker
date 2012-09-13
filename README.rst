@@ -1,5 +1,5 @@
 python laser tracker
---------------------
+====================
 
 This is a quick attempt to track the dot from a red laser pointer.
 
@@ -12,9 +12,11 @@ several HighGUI windows. The general idea is to:
 4. Apply a threshold to each compenent (hopefully keeping just the dot from the laser)
 5. Perform an AND operation on the 3 images (which "should" cut down on false positives)
 
-TODO: 
-6. Identify the _best_ location for the identified laser. ie: x,y coordinates in the image.
-7. Do something interesting with it; e.g. draw a circle around it, control the mouse cursor, build a game, etc.
+TODO (or, what should you do now!)
+----------------------------------
+
+* Identify the _best_ location for the identified laser. ie: x,y coordinates in the image.
+* Do something interesting with it; e.g. draw a circle around it, control the mouse cursor, build a game, etc.
 
 Requirments
 -----------
