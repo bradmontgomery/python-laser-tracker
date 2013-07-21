@@ -24,7 +24,8 @@ OS X using OpenCV 2.4.5 installed with homebrew.
 Usage
 -----
 
-Run ``python laster_tracker.py -h`` to see some command-line parameters.
+Run ``python laser_tracker/laser_tracker.py -h`` for help on the available
+command-line parameters.
 
 
 License
