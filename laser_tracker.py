@@ -1,16 +1,15 @@
 #! /usr/bin/env python
 import argparse
-
-from sys import exit, stdout, stderr
-from opencv import cv
-from opencv import highgui
+import cv
+import cv2
+import sys
 
 
 class LaserTracker(object):
 
     def __init__(self, cam_width=640, cam_height=480, hue_min=5, hue_max=6,
-                 sat_min=50, sat_max=100, val_min=250, val_max=256):
-
+                 sat_min=50, sat_max=100, val_min=250, val_max=256,
+                 display_thresholds=False):
         """
         * ``cam_width`` x ``cam_height`` -- This should be the size of the
         image coming from the camera. Default is 640x480.
@@ -25,6 +24,9 @@ class LaserTracker(object):
         If the dot from the laser pointer doesn't fall within these values, it
         will be ignored.
 
+        * ``display_thresholds`` -- if True, additional windows will display
+          values for threshold image channels.
+
         """
 
         self.cam_width = cam_width
@@ -35,6 +37,7 @@ class LaserTracker(object):
         self.sat_max = sat_max
         self.val_min = val_min
         self.val_max = val_max
+        self.display_thresholds = display_thresholds
 
         self.capture = None  # camera capture device
         self.channels = {
@@ -47,11 +50,11 @@ class LaserTracker(object):
     def create_and_position_window(self, name, xpos, ypos):
         """Creates a named widow placing it on the screen at (xpos, ypos)."""
         # Create a window
-        highgui.cvNamedWindow(name, highgui.CV_WINDOW_AUTOSIZE)
+        cv2.namedWindow(name, cv2.CV_WINDOW_AUTOSIZE)
         # Resize it to the size of the camera image
-        highgui.cvResizeWindow(name, self.cam_width, self.cam_height)
+        cv2.resizeWindow(name, self.cam_width, self.cam_height)
         # Move to (xpos,ypos) on the screen
-        highgui.cvMoveWindow(name, xpos, ypos)
+        cv2.moveWindow(name, xpos, ypos)
 
     def setup_camera_capture(self, device_num=0):
         """Perform camera setup for the device number (default device = 0).
@@ -60,49 +63,35 @@ class LaserTracker(object):
         """
         try:
             device = int(device_num)
-            stdout.write("Using Camera Device: {0}\n".format(device))
+            sys.stdout.write("Using Camera Device: {0}\n".format(device))
         except (IndexError, ValueError):
             # assume we want the 1st device
             device = 0
-            stderr.write("Invalid Device. Using default device 0\n")
+            sys.stderr.write("Invalid Device. Using default device 0\n")
 
         # Try to start capturing frames
-        self.capture = highgui.cvCreateCameraCapture(device)
+        self.capture = cv2.VideoCapture(device)
+        if not self.capture.isOpened():
+            sys.stderr.write("Faled to Open Capture device. Quitting.\n")
+            sys.exit(1)
 
         # set the wanted image size from the camera
-        highgui.cvSetCaptureProperty(
-            self.capture,
-            highgui.CV_CAP_PROP_FRAME_WIDTH,
+        self.capture.set(
+            cv.CV_CAP_PROP_FRAME_WIDTH,
             self.cam_width
         )
-        highgui.cvSetCaptureProperty(
-            self.capture,
-            highgui.CV_CAP_PROP_FRAME_HEIGHT,
+        self.capture.set(
+            cv.CV_CAP_PROP_FRAME_HEIGHT,
             self.cam_height
         )
-
-        # check that capture device is OK
-        if not self.capture:
-            stderr.write("Error opening capture device. Quitting.")
-            exit(1)
         return self.capture
 
-    def handle_quit(self):
+    def handle_quit(self, delay=10):
         """Quit the program if the user presses "Esc" or "q"."""
-        k = highgui.cvWaitKey(10)
-        if k in ['\x1b', 'q']:
-            exit(0)
-
-    def _create_blank_image(self):
-        """Create an blank image based on the camera's size."""
-        size = cv.cvSize(self.cam_width, self.cam_height)
-        img = cv.cvCreateImage(size, 8, 1)
-        cv.cvSetZero(img)
-        return img
-
-    def initialize_channels(self):
-        for k in self.channels.keys():
-            self.channels[k] = self._create_blank_image()
+        key = cv2.waitKey(delay)
+        c = chr(key & 255)
+        if c in ['q', 'Q', chr(27)]:
+            sys.exit(0)
 
     def threshold_image(self, channel):
         if channel == "hue":
@@ -115,25 +104,23 @@ class LaserTracker(object):
             minimum = self.val_min
             maximum = self.val_max
 
-        cv.cvInRangeS(
+        (t, img) = cv2.threshold(
             self.channels[channel],
             minimum,
             maximum,
-            self.channels[channel]
+            cv2.THRESH_BINARY | cv2.THRESH_OTSU
         )
+        # Replace this channel with the threshold'ed image
+        self.channels[channel] = img
 
     def detect(self, frame):
-        hsv_image = cv.cvCloneImage(frame)  # temporary copy of the frame
-        cv.cvCvtColor(frame, hsv_image, cv.CV_BGR2HSV)  # convert to HSV
+        hsv_img = cv2.cvtColor(frame, cv.CV_BGR2HSV)
 
         # split the video frame into color channels
-        cv.cvSplit(
-            hsv_image,
-            self.channels['hue'],
-            self.channels['saturation'],
-            self.channels['value'],
-            None
-        )
+        h, s, v = cv2.split(hsv_img)
+        self.channels['hue'] = h
+        self.channels['saturation'] = s
+        self.channels['value'] = v
 
         # Threshold ranges of HSV components; storing the results in place
         self.threshold_image("hue")
@@ -141,71 +128,61 @@ class LaserTracker(object):
         self.threshold_image("value")
 
         # Perform an AND on HSV components to identify the laser!
-        cv.cvAnd(
+        self.channels['laser'] = cv2.bitwise_and(
             self.channels['hue'],
-            self.channels['value'],
-            self.channels['laser']
+            self.channels['value']
         )
-        # This actually Worked OK for me without using Saturation, but
+
+        # NOTE: This actually Worked OK for me without using Saturation, but
         # it's something you might want to try.
-        #cv.cvAnd(
-            #self.channels['laser'],
-            #self.channels['satruation'],
+        #self.channels['laser'] = cv2.bitwise_and(
+            #self.channels['saturation'],
             #self.channels['laser']
         #)
 
         # Merge the HSV components back together.
-        cv.cvMerge(
+        hsv_image = cv2.merge([
             self.channels['hue'],
             self.channels['saturation'],
             self.channels['value'],
-            None,
-            hsv_image
-        )
+        ])
         return hsv_image
 
     def display(self, img, frame):
         """Display the combined image and (optionally) all other image channels
         NOTE: default color space in OpenCV is BGR.
         """
-        highgui.cvShowImage('Thresholded_HSV_Image', img)
-        highgui.cvShowImage('RGB_VideoFrame', frame)
-        highgui.cvShowImage('Hue', self.channels['hue'])
-        highgui.cvShowImage('Saturation', self.channels['saturation'])
-        highgui.cvShowImage('Value', self.channels['value'])
-        highgui.cvShowImage('LaserPointer', self.channels['laser'])
+        cv2.imshow('RGB_VideoFrame', frame)
+        cv2.imshow('LaserPointer', self.channels['laser'])
+        if self.display_thresholds:
+            cv2.imshow('Thresholded_HSV_Image', img)
+            cv2.imshow('Hue', self.channels['hue'])
+            cv2.imshow('Saturation', self.channels['saturation'])
+            cv2.imshow('Value', self.channels['value'])
 
     def run(self):
-        stdout.write("Using OpenCV version: {0} ({1}, {2}, {3})\n".format(
-            cv.CV_VERSION,
-            cv.CV_MAJOR_VERSION,
-            cv.CV_MINOR_VERSION,
-            cv.CV_SUBMINOR_VERSION
-        ))
+        sys.stdout.write("Using OpenCV version: {0}\n".format(cv2.__version__))
 
         # create output windows
-        self.create_and_position_window('Thresholded_HSV_Image', 10, 10)
-        self.create_and_position_window('RGB_VideoFrame',
-            10 + self.cam_width, 10)
-        self.create_and_position_window('Hue', 10, 10 + self.cam_height)
-        self.create_and_position_window('Saturation', 210,
-            10 + self.cam_height)
-        self.create_and_position_window('Value', 410, 10 + self.cam_height)
         self.create_and_position_window('LaserPointer', 0, 0)
+        self.create_and_position_window('RGB_VideoFrame',
+            10 + self.cam_width, 0)
+        if self.display_thresholds:
+            self.create_and_position_window('Thresholded_HSV_Image', 10, 10)
+            self.create_and_position_window('Hue', 20, 20)
+            self.create_and_position_window('Saturation', 30, 30)
+            self.create_and_position_window('Value', 40, 40)
 
         # Set up the camer captures
         self.setup_camera_capture()
 
-        # create images for the different channels
-        self.initialize_channels()
-
         while True:
             # 1. capture the current image
-            frame = highgui.cvQueryFrame(self.capture)
-            if frame is None:
+            success, frame = self.capture.read()
+            if not success:
                 # no image captured... end the processing
-                stderr.write("Could not read camer frame. Quitting\n")
-                exit(1)
+                sys.stderr.write("Could not read camera frame. Quitting\n")
+                sys.exit(1)
 
             hsv_image = self.detect(frame)
             self.display(hsv_image, frame)
@@ -215,15 +192,15 @@ class LaserTracker(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run the Laser Tracker')
-    parser.add_argument('-H', '--height',
-        default='640',
-        type=int,
-        help='Camera Height'
-    )
     parser.add_argument('-W', '--width',
-        default=480,
+        default=640,
         type=int,
         help='Camera Width'
+    )
+    parser.add_argument('-H', '--height',
+        default='480',
+        type=int,
+        help='Camera Height'
     )
     parser.add_argument('-u', '--huemin',
         default=5,
@@ -255,6 +232,10 @@ if __name__ == '__main__':
         type=int,
         help='Value Minimum Threshold'
     )
+    parser.add_argument('-d', '--display',
+        action='store_true',
+        help='Display Threshold Windows'
+    )
     params = parser.parse_args()
 
     tracker = LaserTracker(
@@ -265,6 +246,7 @@ if __name__ == '__main__':
         sat_min=params.satmin,
         sat_max=params.satmax,
         val_min=params.valmin,
-        val_max=params.valmax
+        val_max=params.valmax,
+        display_thresholds=params.display
     )
     tracker.run()
