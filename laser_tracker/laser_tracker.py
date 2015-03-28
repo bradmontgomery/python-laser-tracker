@@ -8,7 +8,7 @@ import sys
 class LaserTracker(object):
 
     def __init__(self, cam_width=640, cam_height=480, hue_min=5, hue_max=6,
-                 sat_min=50, sat_max=100, val_min=250, val_max=256,
+                 sat_min=50, sat_max=100, val_min=250, val_max=256, use_sat=True,
                  display_thresholds=False):
         """
         * ``cam_width`` x ``cam_height`` -- This should be the size of the
@@ -38,6 +38,7 @@ class LaserTracker(object):
         self.val_min = val_min
         self.val_max = val_max
         self.display_thresholds = display_thresholds
+        self.use_sat = use_sat
 
         self.capture = None  # camera capture device
         self.channels = {
@@ -133,12 +134,13 @@ class LaserTracker(object):
             self.channels['value']
         )
 
-        # NOTE: This actually Worked OK for me without using Saturation, but
-        # it's something you might want to try.
-        #self.channels['laser'] = cv2.bitwise_and(
-            #self.channels['saturation'],
-            #self.channels['laser']
-        #)
+        if self.use_sat:
+            # NOTE: This actually Worked OK for me without using Saturation, but
+            # it's something you might want to try.
+            self.channels['laser'] = cv2.bitwise_and(
+                self.channels['saturation'],
+                self.channels['laser']
+            )
 
         # Merge the HSV components back together.
         hsv_image = cv2.merge([
@@ -146,6 +148,7 @@ class LaserTracker(object):
             self.channels['saturation'],
             self.channels['value'],
         ])
+
         return hsv_image
 
     def display(self, img, frame):
@@ -159,6 +162,7 @@ class LaserTracker(object):
             cv2.imshow('Hue', self.channels['hue'])
             cv2.imshow('Saturation', self.channels['saturation'])
             cv2.imshow('Value', self.channels['value'])
+
 
     def run(self):
         sys.stdout.write("Using OpenCV version: {0}\n".format(cv2.__version__))
