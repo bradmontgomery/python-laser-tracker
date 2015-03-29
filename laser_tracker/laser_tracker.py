@@ -109,7 +109,7 @@ class LaserTracker(object):
             self.channels[channel],
             minimum,
             maximum,
-            cv2.THRESH_BINARY | cv2.THRESH_OTSU
+            cv2.THRESH_BINARY
         )
 
         # Replace this channel with the threshold'ed image
