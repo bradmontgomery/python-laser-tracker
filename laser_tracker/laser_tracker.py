@@ -157,12 +157,12 @@ class LaserTracker(object):
         NOTE: default color space in OpenCV is BGR.
         """
         cv2.imshow('RGB_VideoFrame', frame)
-        cv2.imshow('LaserPointer', self.channels['laser'])
+        cv2.imshow('LaserPointer', self.channels['laser'] * 100)
         if self.display_thresholds:
             cv2.imshow('Thresholded_HSV_Image', img)
-            cv2.imshow('Hue', self.channels['hue'])
-            cv2.imshow('Saturation', self.channels['saturation'])
-            cv2.imshow('Value', self.channels['value'])
+            cv2.imshow('Hue', self.channels['hue'] * 10)
+            cv2.imshow('Saturation', self.channels['saturation'] * 10)
+            cv2.imshow('Value', self.channels['value'] * 10)
 
 
     def setup_windows(self):
@@ -194,7 +194,6 @@ class LaserTracker(object):
 
             hsv_image = self.detect(frame)
             self.display(hsv_image, frame)
-
             self.handle_quit()
 
 
