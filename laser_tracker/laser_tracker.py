@@ -111,6 +111,7 @@ class LaserTracker(object):
             maximum,
             cv2.THRESH_BINARY | cv2.THRESH_OTSU
         )
+
         # Replace this channel with the threshold'ed image
         self.channels[channel] = img
 
@@ -164,7 +165,7 @@ class LaserTracker(object):
             cv2.imshow('Value', self.channels['value'])
 
 
-    def run(self):
+    def setup_windows(self):
         sys.stdout.write("Using OpenCV version: {0}\n".format(cv2.__version__))
 
         # create output windows
@@ -177,14 +178,17 @@ class LaserTracker(object):
             self.create_and_position_window('Saturation', 30, 30)
             self.create_and_position_window('Value', 40, 40)
 
-        # Set up the camer captures
+
+    def run(self):
+        # Set up window positions
+        self.setup_windows()
+        # Set up the camera capture
         self.setup_camera_capture()
 
         while True:
             # 1. capture the current image
             success, frame = self.capture.read()
-            if not success:
-                # no image captured... end the processing
+            if not success: # no image captured... end the processing
                 sys.stderr.write("Could not read camera frame. Quitting\n")
                 sys.exit(1)
 
