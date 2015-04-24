@@ -1,10 +1,28 @@
 python laser tracker
 ====================
 
-This is a quick & dirty OpenCV app to track the dot from a red laser pointer.
+This is a OpenCV application that applies filters in order to track specific HSV ranges. By default, it tracks a red laser pointer, but it is modular and you can track about whatever you want.
 
-Right now, the code performs the following steps, and displays the results in
-several windows. The general idea is to:
+
+Requirments
+-----------
+
+This requires Python2 and the Python wrapper for OpenCV.
+It was tested on GNU/Linux distributions and Mac OS X.
+
+Usage
+-----
+Run ``python laser_tracker/laser_tracker.py -h`` for help on the available command-line parameters.
+
+
+Range for each HSV components:
+    -   hue: [0, 180]
+    -   saturation: [0, 255]
+    -   value: [0, 255]
+
+About the code
+--------------
+The code performs the following steps, and displays the results in several windows. The general idea is to:
 
 1. Grab the video frame.
 2. Convert it to HSV
@@ -13,20 +31,9 @@ several windows. The general idea is to:
 5. Perform an AND operation on the 3 images (which "should" cut down on false positives)
 6. Display the result.
 
+The filtering part is done using successive `thresholding <http://docs.opencv.org/modules/imgproc/doc/miscellaneous_transformations.html?highlight=threshold#threshold>`_
 
-Requirments
------------
-
-This requires Python and the Python wrapper for OpenCV. It was tested on Mac
-OS X using OpenCV 2.4.5 installed with homebrew.
-
-
-Usage
------
-
-Run ``python laser_tracker/laser_tracker.py -h`` for help on the available
-command-line parameters.
-
+.. image:: img/filtering.png
 
 License
 -------
