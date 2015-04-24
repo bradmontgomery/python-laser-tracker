@@ -7,8 +7,8 @@ import sys
 
 class LaserTracker(object):
 
-    def __init__(self, cam_width=640, cam_height=480, hue_min=5, hue_max=6,
-                 sat_min=50, sat_max=100, val_min=250, val_max=256, use_sat=True,
+    def __init__(self, cam_width=640, cam_height=480, hue_min=20, hue_max=160,
+                 sat_min=100, sat_max=255, val_min=200, val_max=256,
                  display_thresholds=False):
         """
         * ``cam_width`` x ``cam_height`` -- This should be the size of the
@@ -232,7 +232,7 @@ if __name__ == '__main__':
     parser.add_argument('-S', '--satmax',
         default=255,
         type=int,
-        help='Saturation Minimum Threshold'
+        help='Saturation Maximum Threshold'
     )
     parser.add_argument('-v', '--valmin',
         default=200,
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     parser.add_argument('-V', '--valmax',
         default=255,
         type=int,
-        help='Value Minimum Threshold'
+        help='Value Maximum Threshold'
     )
     parser.add_argument('-d', '--display',
         action='store_true',
