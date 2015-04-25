@@ -7,8 +7,8 @@ import sys
 
 class LaserTracker(object):
 
-    def __init__(self, cam_width=640, cam_height=480, hue_min=5, hue_max=6,
-                 sat_min=50, sat_max=100, val_min=250, val_max=256,
+    def __init__(self, cam_width=640, cam_height=480, hue_min=20, hue_max=160,
+                 sat_min=100, sat_max=255, val_min=200, val_max=256,
                  display_thresholds=False):
         """
         * ``cam_width`` x ``cam_height`` -- This should be the size of the
@@ -38,6 +38,7 @@ class LaserTracker(object):
         self.val_min = val_min
         self.val_max = val_max
         self.display_thresholds = display_thresholds
+        self.use_sat = use_sat
 
         self.capture = None  # camera capture device
         self.channels = {
@@ -104,14 +105,24 @@ class LaserTracker(object):
             minimum = self.val_min
             maximum = self.val_max
 
-        (t, img) = cv2.threshold(
-            self.channels[channel],
-            minimum,
-            maximum,
-            cv2.THRESH_BINARY | cv2.THRESH_OTSU
+        (t, tmp) = cv2.threshold(
+            self.channels[channel], # src
+            maximum, # threshold value
+            0, # we dont care because of the selected type
+            cv2.THRESH_TOZERO_INV #t type
         )
-        # Replace this channel with the threshold'ed image
-        self.channels[channel] = img
+
+        (t, self.channels[channel]) = cv2.threshold(
+            tmp, # src
+            minimum, # threshold value
+            255, # maxvalue
+            cv2.THRESH_BINARY # type
+        )
+
+        if channel == 'hue':
+            # only works for filtering red color because the range for the hue is split
+            self.channels['hue'] = cv2.bitwise_not(self.channels['hue'])
+
 
     def detect(self, frame):
         hsv_img = cv2.cvtColor(frame, cv.CV_BGR2HSV)
@@ -132,13 +143,10 @@ class LaserTracker(object):
             self.channels['hue'],
             self.channels['value']
         )
-
-        # NOTE: This actually Worked OK for me without using Saturation, but
-        # it's something you might want to try.
-        #self.channels['laser'] = cv2.bitwise_and(
-            #self.channels['saturation'],
-            #self.channels['laser']
-        #)
+        self.channels['laser'] = cv2.bitwise_and(
+            self.channels['saturation'],
+            self.channels['laser']
+        )
 
         # Merge the HSV components back together.
         hsv_image = cv2.merge([
@@ -146,6 +154,7 @@ class LaserTracker(object):
             self.channels['saturation'],
             self.channels['value'],
         ])
+
         return hsv_image
 
     def display(self, img, frame):
@@ -160,7 +169,8 @@ class LaserTracker(object):
             cv2.imshow('Saturation', self.channels['saturation'])
             cv2.imshow('Value', self.channels['value'])
 
-    def run(self):
+
+    def setup_windows(self):
         sys.stdout.write("Using OpenCV version: {0}\n".format(cv2.__version__))
 
         # create output windows
@@ -173,20 +183,22 @@ class LaserTracker(object):
             self.create_and_position_window('Saturation', 30, 30)
             self.create_and_position_window('Value', 40, 40)
 
-        # Set up the camer captures
+
+    def run(self):
+        # Set up window positions
+        self.setup_windows()
+        # Set up the camera capture
         self.setup_camera_capture()
 
         while True:
             # 1. capture the current image
             success, frame = self.capture.read()
-            if not success:
-                # no image captured... end the processing
+            if not success: # no image captured... end the processing
                 sys.stderr.write("Could not read camera frame. Quitting\n")
                 sys.exit(1)
 
             hsv_image = self.detect(frame)
             self.display(hsv_image, frame)
-
             self.handle_quit()
 
 
@@ -198,39 +210,39 @@ if __name__ == '__main__':
         help='Camera Width'
     )
     parser.add_argument('-H', '--height',
-        default='480',
+        default=480,
         type=int,
         help='Camera Height'
     )
     parser.add_argument('-u', '--huemin',
-        default=5,
+        default=20,
         type=int,
         help='Hue Minimum Threshold'
     )
     parser.add_argument('-U', '--huemax',
-        default=6,
+        default=160,
         type=int,
         help='Hue Maximum Threshold'
     )
     parser.add_argument('-s', '--satmin',
-        default=50,
-        type=int,
-        help='Saturation Minimum Threshold'
-    )
-    parser.add_argument('-S', '--satmax',
         default=100,
         type=int,
         help='Saturation Minimum Threshold'
     )
+    parser.add_argument('-S', '--satmax',
+        default=255,
+        type=int,
+        help='Saturation Maximum Threshold'
+    )
     parser.add_argument('-v', '--valmin',
-        default=250,
+        default=200,
         type=int,
         help='Value Minimum Threshold'
     )
     parser.add_argument('-V', '--valmax',
-        default=256,
+        default=255,
         type=int,
-        help='Value Minimum Threshold'
+        help='Value Maximum Threshold'
     )
     parser.add_argument('-d', '--display',
         action='store_true',
