@@ -38,7 +38,6 @@ class LaserTracker(object):
         self.val_min = val_min
         self.val_max = val_max
         self.display_thresholds = display_thresholds
-        self.use_sat = use_sat
 
         self.capture = None  # camera capture device
         self.channels = {
