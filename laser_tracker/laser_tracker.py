@@ -1,9 +1,7 @@
 #! /usr/bin/env python
 import argparse
-import cv
 import cv2
 import sys
-
 
 class LaserTracker(object):
 
@@ -50,7 +48,7 @@ class LaserTracker(object):
     def create_and_position_window(self, name, xpos, ypos):
         """Creates a named widow placing it on the screen at (xpos, ypos)."""
         # Create a window
-        cv2.namedWindow(name, cv2.CV_WINDOW_AUTOSIZE)
+        cv2.namedWindow(name)
         # Resize it to the size of the camera image
         cv2.resizeWindow(name, self.cam_width, self.cam_height)
         # Move to (xpos,ypos) on the screen
@@ -77,11 +75,11 @@ class LaserTracker(object):
 
         # set the wanted image size from the camera
         self.capture.set(
-            cv.CV_CAP_PROP_FRAME_WIDTH,
+            cv2.CAP_PROP_FRAME_WIDTH,
             self.cam_width
         )
         self.capture.set(
-            cv.CV_CAP_PROP_FRAME_HEIGHT,
+            cv2.CAP_PROP_FRAME_HEIGHT,
             self.cam_height
         )
         return self.capture
@@ -124,7 +122,7 @@ class LaserTracker(object):
 
 
     def detect(self, frame):
-        hsv_img = cv2.cvtColor(frame, cv.CV_BGR2HSV)
+        hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         # split the video frame into color channels
         h, s, v = cv2.split(hsv_img)
