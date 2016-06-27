@@ -75,11 +75,11 @@ class LaserTracker(object):
 
         # set the wanted image size from the camera
         self.capture.set(
-            cv2.CAP_PROP_FRAME_WIDTH,
+            cv2.cv.CV_CAP_PROP_FRAME_WIDTH,
             self.cam_width
         )
         self.capture.set(
-            cv2.CAP_PROP_FRAME_HEIGHT,
+            cv2.cv.CV_CAP_PROP_FRAME_HEIGHT,
             self.cam_height
         )
         return self.capture
