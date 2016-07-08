@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 import argparse
 import cv2
+import numpy
 import sys
 
 class LaserTracker(object):
@@ -45,6 +46,9 @@ class LaserTracker(object):
             'laser': None,
         }
 
+        self.previous_position = None
+        self.trail = numpy.zeros((self.cam_height, self.cam_width, 3), numpy.uint8)
+
     def create_and_position_window(self, name, xpos, ypos):
         """Creates a named widow placing it on the screen at (xpos, ypos)."""
         # Create a window
@@ -88,6 +92,8 @@ class LaserTracker(object):
         """Quit the program if the user presses "Esc" or "q"."""
         key = cv2.waitKey(delay)
         c = chr(key & 255)
+        if c in ['c', 'C']:
+            self.trail = numpy.zeros((self.cam_height, self.cam_width, 3), numpy.uint8)
         if c in ['q', 'Q', chr(27)]:
             sys.exit(0)
 
@@ -120,6 +126,42 @@ class LaserTracker(object):
             # only works for filtering red color because the range for the hue is split
             self.channels['hue'] = cv2.bitwise_not(self.channels['hue'])
 
+    def track(self, frame, mask):
+        """
+        Track the position of the laser pointer.
+
+        Code taken from http://www.pyimagesearch.com/2015/09/14/ball-tracking-with-opencv/
+        """
+        center = None
+
+        countours = cv2.findContours(mask, cv2.RETR_EXTERNAL,
+                                     cv2.CHAIN_APPROX_SIMPLE)[-2]
+
+        # only proceed if at least one contour was found
+        if len(countours) > 0:
+            # find the largest contour in the mask, then use
+            # it to compute the minimum enclosing circle and
+            # centroid
+            c = max(countours, key=cv2.contourArea)
+            ((x, y), radius) = cv2.minEnclosingCircle(c)
+            moments = cv2.moments(c)
+            if moments["m00"] > 0:
+                center = int(moments["m10"] / moments["m00"]), int(moments["m01"] / moments["m00"])
+            else:
+                center = int(x), int(y)
+
+            # only proceed if the radius meets a minimum size
+            if radius > 10:
+                # draw the circle and centroid on the frame,
+                cv2.circle(frame, (int(x), int(y)), int(radius),
+                           (0, 255, 255), 2)
+                cv2.circle(frame, center, 5, (0, 0, 255), -1)
+                # then update the ponter trail
+                if self.previous_position:
+                    cv2.line(self.trail, self.previous_position, center, (255, 255, 255), 2)
+
+        cv2.add(self.trail, frame, frame)
+        self.previous_position = center
 
     def detect(self, frame):
         hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -151,6 +193,8 @@ class LaserTracker(object):
             self.channels['saturation'],
             self.channels['value'],
         ])
+
+        self.track(frame, self.channels['laser'])
 
         return hsv_image
 
