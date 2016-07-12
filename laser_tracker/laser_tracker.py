@@ -1,8 +1,8 @@
 #! /usr/bin/env python
+import sys
 import argparse
 import cv2
 import numpy
-import sys
 
 
 class LaserTracker(object):
@@ -253,47 +253,38 @@ if __name__ == '__main__':
     parser.add_argument('-W', '--width',
                         default=640,
                         type=int,
-                        help='Camera Width'
-                        )
+                        help='Camera Width')
     parser.add_argument('-H', '--height',
                         default=480,
                         type=int,
-                        help='Camera Height'
-                        )
+                        help='Camera Height')
     parser.add_argument('-u', '--huemin',
                         default=20,
                         type=int,
-                        help='Hue Minimum Threshold'
-                        )
+                        help='Hue Minimum Threshold')
     parser.add_argument('-U', '--huemax',
                         default=160,
                         type=int,
-                        help='Hue Maximum Threshold'
-                        )
+                        help='Hue Maximum Threshold')
     parser.add_argument('-s', '--satmin',
                         default=100,
                         type=int,
-                        help='Saturation Minimum Threshold'
-                        )
+                        help='Saturation Minimum Threshold')
     parser.add_argument('-S', '--satmax',
                         default=255,
                         type=int,
-                        help='Saturation Maximum Threshold'
-                        )
+                        help='Saturation Maximum Threshold')
     parser.add_argument('-v', '--valmin',
                         default=200,
                         type=int,
-                        help='Value Minimum Threshold'
-                        )
+                        help='Value Minimum Threshold')
     parser.add_argument('-V', '--valmax',
                         default=255,
                         type=int,
-                        help='Value Maximum Threshold'
-                        )
+                        help='Value Maximum Threshold')
     parser.add_argument('-d', '--display',
                         action='store_true',
-                        help='Display Threshold Windows'
-                        )
+                        help='Display Threshold Windows')
     params = parser.parse_args()
 
     tracker = LaserTracker(
