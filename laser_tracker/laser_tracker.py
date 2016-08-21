@@ -1,8 +1,9 @@
 #! /usr/bin/env python
+import sys
 import argparse
 import cv2
 import numpy
-import sys
+
 
 class LaserTracker(object):
 
@@ -47,7 +48,8 @@ class LaserTracker(object):
         }
 
         self.previous_position = None
-        self.trail = numpy.zeros((self.cam_height, self.cam_width, 3), numpy.uint8)
+        self.trail = numpy.zeros((self.cam_height, self.cam_width, 3),
+                                 numpy.uint8)
 
     def create_and_position_window(self, name, xpos, ypos):
         """Creates a named widow placing it on the screen at (xpos, ypos)."""
@@ -93,7 +95,8 @@ class LaserTracker(object):
         key = cv2.waitKey(delay)
         c = chr(key & 255)
         if c in ['c', 'C']:
-            self.trail = numpy.zeros((self.cam_height, self.cam_width, 3), numpy.uint8)
+            self.trail = numpy.zeros((self.cam_height, self.cam_width, 3),
+                                     numpy.uint8)
         if c in ['q', 'Q', chr(27)]:
             sys.exit(0)
 
@@ -109,28 +112,30 @@ class LaserTracker(object):
             maximum = self.val_max
 
         (t, tmp) = cv2.threshold(
-            self.channels[channel], # src
-            maximum, # threshold value
-            0, # we dont care because of the selected type
-            cv2.THRESH_TOZERO_INV #t type
+            self.channels[channel],  # src
+            maximum,  # threshold value
+            0,  # we dont care because of the selected type
+            cv2.THRESH_TOZERO_INV  # t type
         )
 
         (t, self.channels[channel]) = cv2.threshold(
-            tmp, # src
-            minimum, # threshold value
-            255, # maxvalue
-            cv2.THRESH_BINARY # type
+            tmp,  # src
+            minimum,  # threshold value
+            255,  # maxvalue
+            cv2.THRESH_BINARY  # type
         )
 
         if channel == 'hue':
-            # only works for filtering red color because the range for the hue is split
+            # only works for filtering red color because the range for the hue
+            # is split
             self.channels['hue'] = cv2.bitwise_not(self.channels['hue'])
 
     def track(self, frame, mask):
         """
         Track the position of the laser pointer.
 
-        Code taken from http://www.pyimagesearch.com/2015/09/14/ball-tracking-with-opencv/
+        Code taken from
+        http://www.pyimagesearch.com/2015/09/14/ball-tracking-with-opencv/
         """
         center = None
 
@@ -146,7 +151,8 @@ class LaserTracker(object):
             ((x, y), radius) = cv2.minEnclosingCircle(c)
             moments = cv2.moments(c)
             if moments["m00"] > 0:
-                center = int(moments["m10"] / moments["m00"]), int(moments["m01"] / moments["m00"])
+                center = int(moments["m10"] / moments["m00"]), \
+                         int(moments["m01"] / moments["m00"])
             else:
                 center = int(x), int(y)
 
@@ -158,7 +164,8 @@ class LaserTracker(object):
                 cv2.circle(frame, center, 5, (0, 0, 255), -1)
                 # then update the ponter trail
                 if self.previous_position:
-                    cv2.line(self.trail, self.previous_position, center, (255, 255, 255), 2)
+                    cv2.line(self.trail, self.previous_position, center,
+                             (255, 255, 255), 2)
 
         cv2.add(self.trail, frame, frame)
         self.previous_position = center
@@ -210,20 +217,18 @@ class LaserTracker(object):
             cv2.imshow('Saturation', self.channels['saturation'])
             cv2.imshow('Value', self.channels['value'])
 
-
     def setup_windows(self):
         sys.stdout.write("Using OpenCV version: {0}\n".format(cv2.__version__))
 
         # create output windows
         self.create_and_position_window('LaserPointer', 0, 0)
         self.create_and_position_window('RGB_VideoFrame',
-            10 + self.cam_width, 0)
+                                        10 + self.cam_width, 0)
         if self.display_thresholds:
             self.create_and_position_window('Thresholded_HSV_Image', 10, 10)
             self.create_and_position_window('Hue', 20, 20)
             self.create_and_position_window('Saturation', 30, 30)
             self.create_and_position_window('Value', 40, 40)
-
 
     def run(self):
         # Set up window positions
@@ -234,7 +239,7 @@ class LaserTracker(object):
         while True:
             # 1. capture the current image
             success, frame = self.capture.read()
-            if not success: # no image captured... end the processing
+            if not success:  # no image captured... end the processing
                 sys.stderr.write("Could not read camera frame. Quitting\n")
                 sys.exit(1)
 
@@ -246,49 +251,40 @@ class LaserTracker(object):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run the Laser Tracker')
     parser.add_argument('-W', '--width',
-        default=640,
-        type=int,
-        help='Camera Width'
-    )
+                        default=640,
+                        type=int,
+                        help='Camera Width')
     parser.add_argument('-H', '--height',
-        default=480,
-        type=int,
-        help='Camera Height'
-    )
+                        default=480,
+                        type=int,
+                        help='Camera Height')
     parser.add_argument('-u', '--huemin',
-        default=20,
-        type=int,
-        help='Hue Minimum Threshold'
-    )
+                        default=20,
+                        type=int,
+                        help='Hue Minimum Threshold')
     parser.add_argument('-U', '--huemax',
-        default=160,
-        type=int,
-        help='Hue Maximum Threshold'
-    )
+                        default=160,
+                        type=int,
+                        help='Hue Maximum Threshold')
     parser.add_argument('-s', '--satmin',
-        default=100,
-        type=int,
-        help='Saturation Minimum Threshold'
-    )
+                        default=100,
+                        type=int,
+                        help='Saturation Minimum Threshold')
     parser.add_argument('-S', '--satmax',
-        default=255,
-        type=int,
-        help='Saturation Maximum Threshold'
-    )
+                        default=255,
+                        type=int,
+                        help='Saturation Maximum Threshold')
     parser.add_argument('-v', '--valmin',
-        default=200,
-        type=int,
-        help='Value Minimum Threshold'
-    )
+                        default=200,
+                        type=int,
+                        help='Value Minimum Threshold')
     parser.add_argument('-V', '--valmax',
-        default=255,
-        type=int,
-        help='Value Maximum Threshold'
-    )
+                        default=255,
+                        type=int,
+                        help='Value Maximum Threshold')
     parser.add_argument('-d', '--display',
-        action='store_true',
-        help='Display Threshold Windows'
-    )
+                        action='store_true',
+                        help='Display Threshold Windows')
     params = parser.parse_args()
 
     tracker = LaserTracker(
